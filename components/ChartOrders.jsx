@@ -176,11 +176,11 @@ export function ChartOrders() {
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 leading-none font-medium">
+        {/* <div className="flex items-center gap-2 leading-none font-medium">
           <span className="inline-flex items-center">
             Trending up by 5.2% this month <TrendingUp className="h-4 w-4 ml-1" />
           </span>
-        </div>
+        </div> */}
         <div className="text-muted-foreground flex items-center gap-2 leading-none">
           {selectedTeam === "All" ? "All Teams" : selectedTeam} - {new Date().getFullYear()}
         </div>

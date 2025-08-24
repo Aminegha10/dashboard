@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Select,
@@ -46,8 +47,11 @@ export default function SalesTeamBarChart() {
       if (timeRange === "last_7")
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
       if (timeRange === "last_30")
-        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 30;
-      if (timeRange === "ytd") return created.getFullYear() === now.getFullYear();
+        return (
+          (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 30
+        );
+      if (timeRange === "ytd")
+        return created.getFullYear() === now.getFullYear();
       return true;
     });
   }, [leads, timeRange]);
@@ -117,9 +121,15 @@ export default function SalesTeamBarChart() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <CardTitle>Team Performance</CardTitle>
-        <div className="flex gap-2 flex-wrap">
+      <CardHeader className="">
+        <div>
+          {" "}
+          <CardTitle className="">Team Performance</CardTitle>
+          <CardDescription className="">
+            Agent Performance Overview
+          </CardDescription>
+        </div>
+        <div className="pt-5 flex justify-center gap-2 flex-wrap">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="min-w-[120px]">
               <SelectValue />
@@ -144,12 +154,12 @@ export default function SalesTeamBarChart() {
             </SelectContent>
           </Select>
 
-          <Input
+          {/* <Input
             placeholder="Search team"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="min-w-[200px]"
-          />
+          /> */}
 
           <Select value={metric} onValueChange={setMetric}>
             <SelectTrigger className="min-w-[160px]">
@@ -184,10 +194,13 @@ export default function SalesTeamBarChart() {
                       : `$${value.toFixed(2)}`
                   }
                 />
-                <Bar dataKey={metric} fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey={metric}
+                  fill="var(--color-primary)"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
-
             {/* 🔥 Totals displayed below chart */}
             <div className="mt-4 text-center font-medium">
               Total Orders: {totals.orders} | Total Leads: {totals.leads}

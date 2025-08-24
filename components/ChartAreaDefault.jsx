@@ -96,7 +96,7 @@ export function ChartAreaDefault() {
             <Line
               type="monotone"
               dataKey="sales"
-              stroke="#4f46e5"
+              stroke="var(--chart-3)"
               strokeWidth={2}
               dot={false}
             />

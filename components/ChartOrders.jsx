@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
-import { TrendingUp } from "lucide-react"
-import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts"
+import { useState, useMemo } from "react";
+import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts";
 
 import {
   Card,
@@ -11,15 +10,22 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useGetLeadDataQuery } from "@/features/dataApi"
+} from "@/components/ui/chart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useGetLeadDataQuery } from "@/features/dataApi";
+import { ThreeDot } from "react-loading-indicators";
+import { Badge } from "./ui/badge";
 
 const chartConfig = {
   leads: {
@@ -30,66 +36,83 @@ const chartConfig = {
     label: "Orders",
     color: "var(--chart-2)",
   },
-}
+};
 
 export function ChartOrders() {
-  const { data: leadsData, isLoading, isError } = useGetLeadDataQuery()
-  const [selectedTeam, setSelectedTeam] = useState("All")
+  const { data: leadsData, isLoading, isError } = useGetLeadDataQuery();
+  const [selectedTeam, setSelectedTeam] = useState("All");
 
   // Process data for the radar chart
   const chartData = useMemo(() => {
-    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    const defaultData = MONTHS.map((month) => ({ month, leads: 0, orders: 0 }))
+    const MONTHS = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const defaultData = MONTHS.map((month) => ({ month, leads: 0, orders: 0 }));
 
-    if (!leadsData?.data?.leads) return defaultData
+    if (!leadsData?.data?.leads) return defaultData;
 
-    const leadsArray = leadsData.data.leads
-    if (!leadsArray?.length) return defaultData
+    const leadsArray = leadsData.data.leads;
+    if (!leadsArray?.length) return defaultData;
 
-    // Filter by team and ensure leads are valid objects
+    // Filter by team OR agent (team.label or createdBy.label)
     const filtered = leadsArray.filter(
-      (lead) => lead && (selectedTeam === "All" || lead.team?.label === selectedTeam)
-    )
+      (lead) =>
+        lead &&
+        (selectedTeam === "All" || lead.createdBy?.label === selectedTeam)
+    );
 
-    // Initialize data for each month of the current year
-    const currentYear = new Date().getFullYear()
-    const monthlyData = defaultData
+    const currentYear = new Date().getFullYear();
+    const monthlyData = defaultData;
 
-    // Aggregate leads/orders per month, but only for the current year
     filtered.forEach((lead) => {
-      const leadDate = new Date(lead.createdAt)
-      const leadYear = leadDate.getFullYear()
-      
-      // Only process leads from any month of the current year
+      const leadDate = new Date(lead.createdAt);
+      const leadYear = leadDate.getFullYear();
+
       if (leadYear === currentYear) {
-        const monthIndex = leadDate.getMonth()
-        monthlyData[monthIndex].leads += 1
-        // Consider a lead as an order if it has price and is marked as 'commande'
-        const hasPrice = Number(lead.prixttc) > 0
-        const isOrder = lead.pipeline?.label?.toLowerCase() === 'commande'
-        monthlyData[monthIndex].orders += (hasPrice && isOrder) ? 1 : 0
+        const monthIndex = leadDate.getMonth();
+        monthlyData[monthIndex].leads += 1;
+
+        const isOrder =
+          lead.pipelineStage?.label?.toLowerCase() ===
+          "confirmation de réception";
+
+        monthlyData[monthIndex].orders += isOrder ? 1 : 0; // only filter by label
       }
-    })
+    });
 
-    return monthlyData
-  }, [leadsData, selectedTeam])
+    return monthlyData;
+  }, [leadsData, selectedTeam]);
 
-  // Extract unique teams for filter dropdown
+  // Extract unique teams and agents for dropdown
   const teams = useMemo(() => {
-    if (!leadsData?.data?.leads) return ["All"]
-    const leadsArray = leadsData.data.leads
-    const list = Array.from(new Set(
+  if (!leadsData?.data?.leads) return ["All"];
+
+  const leadsArray = leadsData.data.leads;
+
+  const list = Array.from(
+    new Set(
       leadsArray
         .filter(Boolean)
-        .map((l) => l.team?.label)
+        .map((l) => l.createdBy?.label)
         .filter(Boolean)
-    ))
-    list.unshift("All")
-    return list
-  }, [leadsData])
+    )
+  );
 
-  if (isLoading) return <p>Loading chart...</p>
-  if (isError) return <p>Error loading data</p>
+  list.unshift("All"); // add "All" option at the beginning
+  return list;
+}, [leadsData]);
+
 
   return (
     <Card>
@@ -101,92 +124,103 @@ export function ChartOrders() {
         <div className="flex gap-2">
           <Select onValueChange={setSelectedTeam} defaultValue="All">
             <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select Team" />
+              <SelectValue placeholder="Select Team/Agent" />
             </SelectTrigger>
             <SelectContent>
               {teams.map((team) => (
-                <SelectItem key={team} value={team}>{team}</SelectItem>
+                <SelectItem key={team} value={team}>
+                  {team}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
+
       <CardContent className="pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[350px]"
-        >
-          <RadarChart
-            data={chartData}
-            margin={{
-              top: 10,
-              right: 10,
-              bottom: 10,
-              left: 10,
-            }}
+        {isLoading ? (
+          <div className="flex justify-center py-6">
+            <ThreeDot
+              variant="pulsate"
+              color="var(--color-primary)"
+              size="medium"
+              text=""
+              textColor=""
+            />
+          </div>
+        ) : isError ? (
+          <div className="flex justify-center py-6 text-red-500">
+            Error loading data
+          </div>
+        ) : (
+          <ChartContainer
+            config={chartConfig}
+            className="mx-auto aspect-square max-h-[350px]"
           >
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <PolarAngleAxis
-              dataKey="month"
-              tick={({ x, y, textAnchor, value, index, ...props }) => {
-                const data = chartData[index]
-                return (
-                  <text
-                    x={x}
-                    y={index === 0 ? y - 10 : y}
-                    textAnchor={textAnchor}
-                    fontSize={13}
-                    fontWeight={500}
-                    {...props}
-                  >
-                    <tspan>{data.leads}</tspan>
-                    <tspan className="fill-muted-foreground">/</tspan>
-                    <tspan>{data.orders}</tspan>
-                    <tspan
+            <RadarChart
+              data={chartData}
+              margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            >
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="line" />}
+              />
+              <PolarAngleAxis
+                dataKey="month"
+                tick={({ x, y, textAnchor, index, ...props }) => {
+                  const data = chartData[index];
+                  return (
+                    <text
                       x={x}
-                      dy={"1rem"}
-                      fontSize={12}
-                      className="fill-muted-foreground"
+                      y={index === 0 ? y - 10 : y}
+                      textAnchor={textAnchor}
+                      fontSize={13}
+                      fontWeight={500}
+                      {...props}
                     >
-                      {data.month}
-                    </tspan>
-                  </text>
-                )
-              }}
-            />
-            <PolarGrid />
-            <Radar
-              name="Leads"
-              dataKey="leads"
-              stroke="var(--chart-1)"
-              fill="var(--chart-1)"
-              fillOpacity={0.6}
-            />
-            <Radar
-              name="Orders"
-              dataKey="orders"
-              stroke="var(--chart-2)"
-              fill="var(--chart-2)"
-              fillOpacity={0.6}
-            />
-          </RadarChart>
-        </ChartContainer>
+                      <tspan>{data.leads}</tspan>
+                      <tspan className="fill-muted-foreground">/</tspan>
+                      <tspan>{data.orders}</tspan>
+                      <tspan
+                        x={x}
+                        dy="1rem"
+                        fontSize={12}
+                        className="fill-muted-foreground"
+                      >
+                        {data.month}
+                      </tspan>
+                    </text>
+                  );
+                }}
+              />
+              <PolarGrid />
+              <Radar
+                name="Leads"
+                dataKey="leads"
+                stroke="var(--chart-1)"
+                fill="var(--chart-1)"
+                fillOpacity={0.6}
+              />
+              <Radar
+                name="Orders"
+                dataKey="orders"
+                stroke="var(--chart-2)"
+                fill="var(--chart-2)"
+                fillOpacity={0.6}
+              />
+            </RadarChart>
+          </ChartContainer>
+        )}
       </CardContent>
+
       <CardFooter className="flex-col gap-2 text-sm">
-        {/* <div className="flex items-center gap-2 leading-none font-medium">
-          <span className="inline-flex items-center">
-            Trending up by 5.2% this month <TrendingUp className="h-4 w-4 ml-1" />
-          </span>
-        </div> */}
         <div className="text-muted-foreground flex items-center gap-2 leading-none">
-          {selectedTeam === "All" ? "All Teams" : selectedTeam} - {new Date().getFullYear()}
+          <Badge variant="secondary">
+            {selectedTeam === "All" ? "All Teams/Agents" : selectedTeam} -{" "}
+            {new Date().getFullYear()}
+          </Badge>
         </div>
       </CardFooter>
     </Card>
-  )
+  );
 }
-
-

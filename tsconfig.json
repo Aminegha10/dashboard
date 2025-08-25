@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/chart-area-interactive.jsx", "app/StoreProvider.jsx", "app/dashboard/page.jsx", "app/page.jsx", "components/ChartAreaDefault.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/chart-area-interactive.jsx", "app/StoreProvider.jsx", "app/dashboard/page.jsx", "app/page.jsx", "components/ChartAreaDefault.jsx", "components/section-cards.jsx"],
   "exclude": ["node_modules"]
 }

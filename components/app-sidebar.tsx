@@ -69,10 +69,10 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props} className="border-r">
-      <SidebarHeader className="border-b">
+      <SidebarHeader className="border-b ">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-3">
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-[22px]">
               <a href="#" className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded bg-teal-500">
                   <IconInnerShadowTop className="!size-5 text-white" />
@@ -85,7 +85,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent className="px-2 py-4">
         <NavMain items={data.navMain} />
-
         <NavSecondary items={data.accountPages} title="ACCOUNT PAGES" className="mt-6" />
       </SidebarContent>
     </Sidebar>

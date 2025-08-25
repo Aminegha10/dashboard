@@ -14,7 +14,7 @@ export const DataApi = createApi({
   }),
   endpoints: (builder) => ({
     getLeadData: builder.query({
-      query: () => `qalqul-leads/leads`,
+      query: () => `qalqul-leads/leads?top=589&skip=0`,
     }),
   }),
 });

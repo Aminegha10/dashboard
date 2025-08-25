@@ -16,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import {
   ResponsiveContainer,
   BarChart,
@@ -26,14 +25,15 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { ThreeDot } from "react-loading-indicators";
+import { Badge } from "./ui/badge";
 
-export default function SalesTeamBarChart() {
+export default function SalesAgentBarChart() {
   const { data: leads, isLoading, error } = useGetLeadDataQuery();
 
   const [metric, setMetric] = useState("sales");
   const [timeRange, setTimeRange] = useState("last_30");
-  const [teamFilter, setTeamFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [agentFilter, setAgentFilter] = useState("all");
 
   // 1️⃣ Filter leads by time
   const filteredByTime = useMemo(() => {
@@ -44,6 +44,7 @@ export default function SalesTeamBarChart() {
     return leadsArray.filter((lead) => {
       if (!lead.createdAt) return true;
       const created = new Date(lead.createdAt);
+
       if (timeRange === "last_7")
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
       if (timeRange === "last_30")
@@ -52,84 +53,82 @@ export default function SalesTeamBarChart() {
         );
       if (timeRange === "ytd")
         return created.getFullYear() === now.getFullYear();
+
       return true;
     });
   }, [leads, timeRange]);
 
-  // 2️⃣ Filter by team (dropdown filter)
-  const filteredByTeam = useMemo(() => {
-    if (teamFilter === "all") return filteredByTime;
-    return filteredByTime.filter((lead) => lead.team?.label === teamFilter);
-  }, [filteredByTime, teamFilter]);
-
-  // 3️⃣ Filter by search (team name search)
-  const filteredLeads = useMemo(() => {
-    if (!searchQuery) return filteredByTeam;
-    return filteredByTeam.filter((lead) =>
-      lead.team?.label?.toLowerCase().includes(searchQuery.toLowerCase())
+  // 2️⃣ Filter by sales agent
+  const filteredByAgent = useMemo(() => {
+    if (agentFilter === "all") return filteredByTime;
+    return filteredByTime.filter(
+      (lead) => lead.createdBy?.label === agentFilter
     );
-  }, [filteredByTeam, searchQuery]);
+  }, [filteredByTime, agentFilter]);
 
-  // 4️⃣ Aggregate per TEAM
+  // 3️⃣ Aggregate per SALES AGENT
   const chartData = useMemo(() => {
     const map = {};
 
-    filteredLeads.forEach((lead) => {
-      const team = lead.team?.label || "Unknown Team";
+    filteredByAgent.forEach((lead) => {
+      const agent = lead.createdBy?.label || "Unknown Agent";
       const sales = Number(lead.prixttc) || 0;
+
+      // ✅ Orders detected by pipelineStage "Préparation de la commande"
       const isOrder =
-        lead.pipeline?.label?.toLowerCase() === "commande" && sales > 0;
+        lead.pipelineStage?.label?.toLowerCase() ===
+        "confirmation de réception";
 
-      if (!map[team]) map[team] = { name: team, leads: 0, orders: 0, sales: 0 };
+      if (!map[agent]) {
+        map[agent] = { name: agent, leads: 0, orders: 0, sales: 0 };
+      }
 
-      // ✅ Every lead is counted
-      map[team].leads += 1;
+      map[agent].leads += 1;
 
       if (isOrder) {
-        map[team].orders += 1;
-        map[team].sales += sales;
+        map[agent].orders += 1;
+        map[agent].sales += sales;
       }
     });
 
-    return Object.values(map).map((t) => ({
-      ...t,
-      conversion: t.leads > 0 ? (t.orders / t.leads) * 100 : 0,
-      aov: t.orders ? t.sales / t.orders : 0,
+    return Object.values(map).map((a) => ({
+      ...a,
+      conversion: a.leads > 0 ? (a.orders / a.leads) * 100 : 0,
+      aov: a.orders ? a.sales / a.orders : 0,
     }));
-  }, [filteredLeads]);
+  }, [filteredByAgent]);
 
-  // 5️⃣ Totals (all teams combined)
+  // 4️⃣ Totals (all agents combined)
   const totals = useMemo(() => {
     return chartData.reduce(
-      (acc, t) => {
-        acc.orders += t.orders;
-        acc.leads += t.leads;
+      (acc, a) => {
+        acc.orders += a.orders;
+        acc.leads += a.leads;
         return acc;
       },
       { orders: 0, leads: 0 }
     );
   }, [chartData]);
 
-  // 6️⃣ Get all unique team names
-  const teams = useMemo(() => {
+  // 5️⃣ Get all unique agents
+  const agents = useMemo(() => {
     if (!leads?.data?.leads) return ["all"];
-    const setTeams = new Set(
-      leads.data.leads.map((l) => l.team?.label).filter(Boolean)
+    const setAgents = new Set(
+      leads.data.leads.map((l) => l.createdBy?.label).filter(Boolean)
     );
-    return ["all", ...Array.from(setTeams)];
+    return ["all", ...Array.from(setAgents)];
   }, [leads]);
 
   return (
     <Card>
-      <CardHeader className="">
+      <CardHeader>
         <div>
-          {" "}
-          <CardTitle className="">Team Performance</CardTitle>
-          <CardDescription className="">
-            Agent Performance Overview
-          </CardDescription>
+          <CardTitle>Agent Performance</CardTitle>
+          <CardDescription>Sales by agent (Leads vs Orders)</CardDescription>
         </div>
+
         <div className="pt-5 flex justify-center gap-2 flex-wrap">
+          {/* Time range filter */}
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="min-w-[120px]">
               <SelectValue />
@@ -141,26 +140,21 @@ export default function SalesTeamBarChart() {
             </SelectContent>
           </Select>
 
-          <Select value={teamFilter} onValueChange={setTeamFilter}>
-            <SelectTrigger className="min-w-[120px]">
+          {/* Agent filter */}
+          <Select value={agentFilter} onValueChange={setAgentFilter}>
+            <SelectTrigger className="min-w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {teams.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t === "all" ? "All Teams" : t}
+              {agents.map((a) => (
+                <SelectItem key={a} value={a}>
+                  {a === "all" ? "All Agents" : a}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          {/* <Input
-            placeholder="Search team"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="min-w-[200px]"
-          /> */}
-
+          {/* Metric filter */}
           <Select value={metric} onValueChange={setMetric}>
             <SelectTrigger className="min-w-[160px]">
               <SelectValue />
@@ -175,8 +169,24 @@ export default function SalesTeamBarChart() {
       </CardHeader>
 
       <CardContent>
-        {isLoading && <div>Loading...</div>}
-        {error && <div className="text-red-500">Error: {error.message}</div>}
+        {isLoading && (
+          <div className="flex justify-center py-6">
+            <ThreeDot
+              variant="pulsate"
+              color="var(--color-primary)"
+              size="medium"
+              text=""
+              textColor=""
+            />
+          </div>
+        )}
+
+        {error && (
+          <div className="flex justify-center py-6 text-red-500">
+            Error loading data
+          </div>
+        )}
+
         {leads?.data?.leads && chartData.length > 0 && (
           <>
             <ResponsiveContainer width="100%" height={300}>
@@ -201,9 +211,11 @@ export default function SalesTeamBarChart() {
                 />
               </BarChart>
             </ResponsiveContainer>
-            {/* 🔥 Totals displayed below chart */}
+
+            {/* Totals below chart */}
             <div className="mt-4 text-center font-medium">
-              Total Orders: {totals.orders} | Total Leads: {totals.leads}
+              <Badge variant="secondary">Total Orders: {totals.orders}</Badge> |{" "}
+              <Badge variant="secondary">Total Leads: {totals.leads}</Badge>
             </div>
           </>
         )}

@@ -3,20 +3,24 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const DataApi = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://smabapi.qalqul.io/api/",
-    prepareHeaders: (headers) => {
-      headers.set(
-        "Authorization",
-        "@pe4^C%^8!p&I8QmV%39ckN%2&DrutipMi6F7pG1sVcQcM9@1u3#b7!d9@2k"
-      );
-      return headers;
-    },
+    baseUrl: "http://localhost:5000/api/", // 👈 using your backend API now
   }),
   endpoints: (builder) => ({
-    getLeadData: builder.query({
-      query: () => `qalqul-leads/leads?top=589&skip=0`,
+    // ✅ Stats endpoint (salesAgent optional)
+    getLeadStats: builder.query({
+      query: (params) => ({
+        url: "LeadStats",
+        params, // RTK Query will handle encoding automatically
+      }),
+    }),
+    // ✅ Orders/Leads radar chart endpoint
+    getRadarStats: builder.query({
+      query: (params) => ({
+        url: "RadarStats",
+        params,
+      }),
     }),
   }),
 });
 
-export const { useGetLeadDataQuery } = DataApi;
+export const { useGetLeadStatsQuery, useGetRadarStatsQuery } = DataApi;

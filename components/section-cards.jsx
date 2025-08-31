@@ -3,12 +3,10 @@
 import { useMemo } from "react";
 import { Wallet, Globe, FileText, ShoppingCart } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useGetLeadDataQuery } from "@/features/dataApi";
-import {
-  calculateAgentPerformance,
-  calculateTotals,
-} from "@/utils/performance";
-import { Riple, ThreeDot } from "react-loading-indicators";
+import { useGetLeadStatsQuery } from "@/features/dataApi";
+import { Grid2x2Plus } from "lucide-react";
+
+import { Riple } from "react-loading-indicators";
 
 function MetricCard({ title, value, change, isPositive, icon, isLoading }) {
   return (
@@ -56,49 +54,35 @@ function MetricCard({ title, value, change, isPositive, icon, isLoading }) {
   );
 }
 
-export function SectionCards() {
-  const { data: leadsData, isLoading } = useGetLeadDataQuery();
-
-  const tableData = useMemo(
-    () => calculateAgentPerformance(leadsData?.data?.leads || []),
-    [leadsData]
-  );
-
-  const totals = useMemo(() => calculateTotals(tableData), [tableData]);
-
-  const conversionPercent =
-    totals.totalLeads > 0
-      ? ((totals.totalOrders / totals.totalLeads) * 100).toFixed(2) + "%"
-      : "0%";
+export function SectionCards({ salesAgent }) {
+  // Call the API with optional salesAgent filter
+  const { data: stats, isLoading } = useGetLeadStatsQuery({ salesAgent });
 
   const metrics = [
     {
-      title: "Total Sales",
-      value: new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(totals.totalSales),
-      change: "+8%",
-      isPositive: true,
-      icon: <Wallet className="w-6 h-6" />,
-    },
-    {
-      title: "Total Leads",
-      value: totals.totalLeads.toString(),
-      change: "+5%",
-      isPositive: true,
-      icon: <Globe className="w-6 h-6" />,
-    },
-    {
       title: "Total Orders",
-      value: totals.totalOrders.toString(),
-      change: "+10%",
+      value: stats?.totalOrders?.toLocaleString() ?? "0",
+      change: "+8%",
       isPositive: true,
       icon: <ShoppingCart className="w-6 h-6" />,
     },
     {
+      title: "Orders Today",
+      value: stats?.todayOrders?.toLocaleString() ?? "0",
+      change: "+5%",
+      isPositive: true,
+      icon: <Grid2x2Plus className="w-6 h-6" />,
+    },
+    {
+      title: "Sales",
+      value: stats?.totalSales + " DH",
+      change: "+5%",
+      isPositive: true,
+      icon: <Wallet className="w-6 h-6" />,
+    },
+    {
       title: "Conversion %",
-      value: conversionPercent,
+      value: 0,
       change: "+2%",
       isPositive: true,
       icon: <FileText className="w-6 h-6" />,
